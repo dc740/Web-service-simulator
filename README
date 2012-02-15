@@ -1,0 +1,61 @@
+This is a port written in python for a web service simulator that was original written in javascript by Aron Racho. This version is a full rewrite with several extra features:
+
+    You can specify the return header to simulate parameters and return codes like 200, 401, 403, etc etc .
+    You can specify dynamic replies based on post parameters, random numbers, UUIDs or counters
+    You can write your own python code and send it in the registration post to modify the replies dynamically, connect to a database, or whatever you want. There is no limit.
+
+
+The server is attached. Just run python server.py
+
+It runs on port 2501 (you can easily change this).
+It logs requests and responses to /tmp/ws_simulator.log
+
+Basic usage:
+1) post to register a new web service specifying the new endpoint and response
+2) use the new endpoint as a real web service
+ 
+Example:
+
+    curl -X POST -H'Content-Type: application/json' -d'
+
+        {
+            "endpoint": "/test",
+            "method": "post",
+            "header":"HTTP/1.1 200 OK\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nConnection:close\\nContent-Type: application/json\\n\\n",
+            "replaceKeys":[{"key":"1","type":"postParam","value":"firstpostparam"},
+                           {"key":"2","type":"postParam","value":"secondpostparam"},
+                           {"key":"3","type":"counter","value":"internalCounter1"},
+                           {"key":"4","type":"randomInt","value":"0-65535"},
+                           {"key":"5","type":"randomUUID","value":""},
+                           {"key":"6","type":"custom","value":"variables[\"hello\"]=\"Hello World\"\\nresponse=response.replace(\"{6}\",variables[\"hello\"])"}],
+            "response": {
+                "firstPostParam": "{1}",
+                "secondPostParam": "{2}",
+                "myCounter": "{3}",
+                "firstPostAgain": "{1}",
+                "randomInteger":"{4}",
+                "randomUUID":"{5}",
+                "customCode":"{6}"
+            }
+        }' http://localhost:2501/register
+
+ 
+
+Now that you have configured an endpoint, test if it works:
+
+    curl -v -X POST http://localhost:2501/test -d "firstpostparam=myvalue1&secondpostparam=myvalue2"
+
+it should return the response with the parameters {x} replaced by the replace keys.
+
+ 
+
+ 
+
+VERY IMPORTANT:
+
+The return header can be customized and it's actually required (so you know the problem it's not any default value, it's you)
+replaceKeys is NOT required. If you don't specify it, the server will always return the static response you sent.
+Be careful when you write your own response parser, you may break the reply. Try to double check your python code.
+
+Copyright 2012 Emilio Moretti <emilio.morettiATgmailDOTcom>
+This program is distributed under the terms of the GNU Lesser General Public License.
