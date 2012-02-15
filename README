@@ -14,6 +14,22 @@ Basic usage:
 1) post to register a new web service specifying the new endpoint and response
 2) use the new endpoint as a real web service
  
+
+Dynamic replies are supported by specifying replaceKeys. Valid replaceKeys:
+postParam: replaces the key by the specified post parameter
+counter: initializes an internal counter (you can initialize as many as you want), replaces the key by the current value, and increases the internal counter by one
+randomInt: replaces the key by a random integer in the "X-Y" range. ie: "4-25" to return a random integer between 4 and 25
+randomUUID: replaces the key by a newly generated UUID
+custom: executes the python code sent. You can basically do anything you want here. The code MUST be encoded in base64. You can store global variables in the "variables" map. The endpoint response is available in the "response" variable as string. ie:
+
+Write some code:
+
+variables["hello"]="Hello World"
+response=response.replace("{6}",variables["hello"])
+
+now encode those two lines in base64 and use that as the custom value:
+dmFyaWFibGVzWyJoZWxsbyJdPSJIZWxsbyBXb3JsZCINCnJlc3BvbnNlPXJlc3BvbnNlLnJlcGxhY2UoIns2fSIsdmFyaWFibGVzWyJoZWxsbyJdKQ==
+
 Example:
 
     curl -X POST -H'Content-Type: application/json' -d'
@@ -27,7 +43,7 @@ Example:
                            {"key":"3","type":"counter","value":"internalCounter1"},
                            {"key":"4","type":"randomInt","value":"0-65535"},
                            {"key":"5","type":"randomUUID","value":""},
-                           {"key":"6","type":"custom","value":"variables[\"hello\"]=\"Hello World\"\\nresponse=response.replace(\"{6}\",variables[\"hello\"])"}],
+                           {"key":"6","type":"custom","value":"dmFyaWFibGVzWyJoZWxsbyJdPSJIZWxsbyBXb3JsZCINCnJlc3BvbnNlPXJlc3BvbnNlLnJlcGxhY2UoIns2fSIsdmFyaWFibGVzWyJoZWxsbyJdKQ=="}],
             "response": {
                 "firstPostParam": "{1}",
                 "secondPostParam": "{2}",
@@ -53,9 +69,10 @@ it should return the response with the parameters {x} replaced by the replace ke
 
 VERY IMPORTANT:
 
-The return header can be customized and it's actually required (so you know the problem it's not any default value, it's you)
-replaceKeys is NOT required. If you don't specify it, the server will always return the static response you sent.
-Be careful when you write your own response parser, you may break the reply. Try to double check your python code.
+*The return header can be customized and it's actually required (so you know the problem it's not any default value, it's you). New header lines are sent using \\n (check the example).
+*replaceKeys is NOT required. If you don't specify it, the server will always return the static response you sent.
+*Be careful when you write your own response parser, you may break the reply. Try to double check your python code.
+*The "custom" code is run after applying all other key replacements to the response.
 
 Copyright 2012 Emilio Moretti <emilio.morettiATgmailDOTcom>
 This program is distributed under the terms of the GNU Lesser General Public License.

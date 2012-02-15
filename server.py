@@ -40,7 +40,7 @@ index = '''
 Custom web server implementation
 '''
 bufsize = 4048
-import socket,re,logging,uuid,random
+import socket,re,logging,uuid,random,base64
 from urlparse import urlparse
 try:
     from urlparse import parse_qs
@@ -160,7 +160,7 @@ def processRandomInteger(request,responseKey,response,replace_key,value):
 def processCustomParser(request,responseKey,response,replace_key,value):
     variables = globalVars
     try:
-        code = str(value).replace("\\n","\n")
+        code = base64.b64decode(str(value))#str(value).replace("\\n","\n")
         exec code
         return response
     except Exception,e:
