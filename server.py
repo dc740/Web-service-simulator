@@ -72,7 +72,7 @@ class Headers(object):
         return getattr(self, name, default)
 
 class Request(object):
-    header_re = re.compile(r'([a-zA-Z-]+):? ([^\r]+)', re.M)
+    header_re = re.compile(r'([a-zA-Z-]+):? ([^\r|^\n]+)', re.M)
 
     def __init__(self, sock):
         header_off = -1
