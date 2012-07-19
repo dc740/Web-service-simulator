@@ -64,13 +64,28 @@ Now that you have configured an endpoint, test if it works:
 it should return the response with the parameters {x} replaced by the replace keys.
 
  
+Simulating HTTP errors:
 
+Gateway timeout:
+	 curl -X POST -H'Content-Type: application/json' -d'{
+				"endpoint": "/timeout",
+				"method": "get",
+				"header":"HTTP/1.1 504 Gateway Timeout\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nConnection:close\\nContent-Type: text/plain\\n\\n"
+			}' http://localhost:2501/register
+Redirect:
+	curl -X POST -H'Content-Type: application/json' -d'{
+				"endpoint": "/example",
+				"method": "get",
+				"header":"HTTP/1.1 302 Found\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nLocation: http://www.example.com\\nConnection:close\\nContent-Type: text/plain\\n\\n",
+				"response":"The URL has moved <a href=\"http://www.example.com\">"
+			}' http://localhost:2501/register
  
 
 VERY IMPORTANT:
 
 *The return header can be customized and it's actually required (so you know the problem it's not any default value, it's you). New header lines are sent using \\n (check the example).
 *replaceKeys is NOT required. If you don't specify it, the server will always return the static response you sent.
+*response is not required. If you don't specify it the header will be returned.
 *Be careful when you write your own response parser, you may break the reply. Try to double check your python code.
 *The "custom" code is run after applying all other key replacements to the response.
 
