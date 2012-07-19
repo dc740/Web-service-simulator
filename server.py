@@ -51,7 +51,7 @@ try:
 except ImportError:
     import simplejson as json
 
-logging.basicConfig(filename='/tmp/ws_simulator.log',level=logging.DEBUG)
+logging.basicConfig(filename='./ws_simulator.log',level=logging.DEBUG)
 acceptor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
 acceptor.setsockopt(
     socket.SOL_SOCKET,
@@ -199,7 +199,7 @@ def requestProcessor( request, responseKey ):
 def requestSetter( data, responseKey , replace_keys = None ):
     responseMap[responseKey] = str(data)
     if (replace_keys): replaceMap[responseKey] = replace_keys
-    response = 'Updated response for ' + str(responseKey) + ' to ' + str(data)
+    response = 'Updated response for ' + str(responseKey) + ' to:\n' + str(data)
     logging.info( str(response ) )
     return response
 
@@ -232,8 +232,13 @@ def endpoint_register(socket, request):
     header = data['header']
     endpoint = data['endpoint']
     method = data['method']
-    response = data['response']
+    
     key = buildKey( method, endpoint )
+    
+    try:
+        response = data['response']
+    except KeyError:
+        response = None
     try:
         replace_keys = data['replaceKeys']
     except KeyError:
@@ -252,24 +257,20 @@ def endpoint_register(socket, request):
     if ( method == 'delete' ):
         delete_endpoints[endpoint] = callback
     if ( response ):
-        registerResponseResult = registerResponse( str(header).replace("\\n","\n") + json.dumps(response), endpoint, method,replace_keys)
+		if (type(response) is dict):
+			registerResponseResult = registerResponse( str(header).replace("\\n","\n") + json.dumps(response), endpoint, method,replace_keys)
+		else:
+			registerResponseResult = registerResponse( str(header).replace("\\n","\n") + str(response), endpoint, method,replace_keys)
+    else:
+		registerResponseResult = registerResponse( str(header).replace("\\n","\n"), endpoint, method,replace_keys)
     
-    socket.send('Registered endpoint ' + str(endpoint) + ' ' + str(registerResponseResult)  )
-    
-def endpoint_register_response(socket,request):
-    data = json.loads(request.content)
-    header = data['header']
-    response = data['response'];
-    endpoint = data['endpoint'];
-    method = data['method'];
-    
-    socket.send( registerResponse( str(header).replace("\\n","\n") + json.dumps(response), endpoint, method ) );
+    socket.send('Registered endpoint ' + str(endpoint) + ' \n' + str(registerResponseResult)  )
     
    
     
 
 
-post_endpoints = {'/register':endpoint_register,'/register/response':endpoint_register_response}
+post_endpoints = {'/register':endpoint_register}
 put_endpoints = {}
 get_endpoints = {}
 delete_endpoints = {}
