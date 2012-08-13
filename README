@@ -27,33 +27,40 @@ Write some code:
 variables["hello"]="Hello World"
 response=response.replace("{6}",variables["hello"])
 
-now encode those two lines in base64 and use that as the custom value:
-dmFyaWFibGVzWyJoZWxsbyJdPSJIZWxsbyBXb3JsZCINCnJlc3BvbnNlPXJlc3BvbnNlLnJlcGxhY2UoIns2fSIsdmFyaWFibGVzWyJoZWxsbyJdKQ==
+now encode those lines in base64 and use that as the custom value:
+dmFyaWFibGVzWyJoZWxsbyJdPSJIZWxsbyBXb3JsZCIKcmVzcG9uc2U9cmVzcG9uc2UucmVwbGFjZSgiezZ9Iix2YXJpYWJsZXNbImhlbGxvIl0p
+
+hint: 
+import base64
+base64.encode(code)
+print(code)
+
 
 Example:
 
-    curl -X POST -H'Content-Type: application/json' -d'
+	curl -X POST -H'Content-Type: application/json' -d'
 
-        {
-            "endpoint": "/test",
-            "method": "post",
-            "header":"HTTP/1.1 200 OK\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nConnection:close\\nContent-Type: application/json\\n\\n",
-            "replaceKeys":[{"key":"1","type":"postParam","value":"firstpostparam"},
-                           {"key":"2","type":"postParam","value":"secondpostparam"},
-                           {"key":"3","type":"counter","value":"internalCounter1"},
-                           {"key":"4","type":"randomInt","value":"0-65535"},
-                           {"key":"5","type":"randomUUID","value":""},
-                           {"key":"6","type":"custom","value":"dmFyaWFibGVzWyJoZWxsbyJdPSJIZWxsbyBXb3JsZCINCnJlc3BvbnNlPXJlc3BvbnNlLnJlcGxhY2UoIns2fSIsdmFyaWFibGVzWyJoZWxsbyJdKQ=="}],
-            "response": {
-                "firstPostParam": "{1}",
-                "secondPostParam": "{2}",
-                "myCounter": "{3}",
-                "firstPostAgain": "{1}",
-                "randomInteger":"{4}",
-                "randomUUID":"{5}",
-                "customCode":"{6}"
-            }
-        }' http://localhost:2501/register
+			{
+				"endpoint": "/test",
+				"method": "post",
+				"header":"HTTP/1.1 200 OK\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nConnection:close\\nContent-Type: application/json\\n\\n",
+				"replaceKeys":[{"key":"1","type":"postParam","value":"firstpostparam"},
+							   {"key":"2","type":"postParam","value":"secondpostparam"},
+							   {"key":"3","type":"counter","value":"internalCounter1"},
+							   {"key":"4","type":"randomInt","value":"0-65535"},
+							   {"key":"5","type":"randomUUID","value":""},
+							   {"key":"6","type":"custom","value":"dmFyaWFibGVzWyJoZWxsbyJdPSJIZWxsbyBXb3JsZCIKcmVzcG9uc2U9cmVzcG9uc2UucmVwbGFjZSgiezZ9Iix2YXJpYWJsZXNbImhlbGxvIl0p"}],
+				"response": {
+					"firstPostParam": "{1}",
+					"secondPostParam": "{2}",
+					"myCounter": "{3}",
+					"firstPostAgain": "{1}",
+					"randomInteger":"{4}",
+					"randomUUID":"{5}",
+					"customCode":"{6}"
+				}
+			}' http://localhost:2501/register
+
 
  
 

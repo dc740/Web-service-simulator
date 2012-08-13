@@ -164,7 +164,7 @@ def processCustomParser(request,responseKey,response,replace_key,value):
         exec code
         return response
     except Exception,e:
-        logging.error( 'Error running custom code: %s' % e)
+        logging.error( 'Error running custom code: %s\nCustom code:\n%sResponse:%s' % (e,code,response))
     
 # Oks, I have to admint that this is a little cryptic for those not used to python
 # we basically use a dictionary as a replacement for a switch statement :)
