@@ -32,7 +32,7 @@ dmFyaWFibGVzWyJoZWxsbyJdPSJIZWxsbyBXb3JsZCIKcmVzcG9uc2U9cmVzcG9uc2UucmVwbGFjZSgi
 
 hint: 
 import base64
-base64.encode(code)
+base64.b64encode(code)
 print(code)
 
 
