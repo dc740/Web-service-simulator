@@ -40,7 +40,7 @@ index = '''
 Custom web server implementation
 '''
 bufsize = 4048
-import socket,re,logging,uuid,random,base64
+import sys,socket,re,logging,uuid,random,base64
 from urlparse import urlparse
 try:
     from urlparse import parse_qs
@@ -51,15 +51,6 @@ try:
 except ImportError:
     import simplejson as json
 
-logging.basicConfig(filename='./ws_simulator.log',level=logging.DEBUG)
-acceptor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-acceptor.setsockopt(
-    socket.SOL_SOCKET,
-    socket.SO_REUSEADDR,
-    1,
-)
-acceptor.bind(('', 2501 ))
-acceptor.listen(10)
 
 class Headers(object):
     def __init__(self, headers):
@@ -86,6 +77,7 @@ class Request(object):
         lines = self.header_re.findall(header_string)
         self.method, path = lines.pop(0)
         path, protocol = path.split(' ')
+        logging.info( "New request\n Path:" + path + " Protocol:" + protocol)
         self.headers = Headers(
             (name.lower().replace('-', '_'), value)
             for name, value in lines
@@ -160,7 +152,7 @@ def processRandomInteger(request,responseKey,response,replace_key,value):
 def processCustomParser(request,responseKey,response,replace_key,value):
     variables = globalVars
     try:
-        code = base64.b64decode(str(value))#str(value).replace("\\n","\n")
+        code = base64.b64decode(str(value))
         exec code
         return response
     except Exception,e:
@@ -260,7 +252,7 @@ def endpoint_register(socket, request):
 		if (type(response) is dict):
 			registerResponseResult = registerResponse( str(header).replace("\\n","\n") + json.dumps(response), endpoint, method,replace_keys)
 		else:
-			registerResponseResult = registerResponse( str(header).replace("\\n","\n") + str(response), endpoint, method,replace_keys)
+			registerResponseResult = registerResponse( str(header).replace("\\n","\n") + base64.b64decode(response), endpoint, method,replace_keys)
     else:
 		registerResponseResult = registerResponse( str(header).replace("\\n","\n"), endpoint, method,replace_keys)
     
@@ -277,6 +269,22 @@ delete_endpoints = {}
 
 
 if __name__ == '__main__':
+	
+	# we don't handle arguments to avoid having to check if optparse or argparse are available
+	# if there is an argument then we print it encoded in base64
+    if (len(sys.argv) >1):
+        print(base64.b64encode(str(sys.argv[1])))
+        exit(1)
+    logging.basicConfig(filename='./ws_simulator.log',level=logging.DEBUG)
+    acceptor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    acceptor.setsockopt(
+        socket.SOL_SOCKET,
+        socket.SO_REUSEADDR,
+        1,
+        )
+    acceptor.bind(('', 2501 ))
+    acceptor.listen(10)
+    
     while True:
         sock, info = acceptor.accept()
         request = Request(sock)

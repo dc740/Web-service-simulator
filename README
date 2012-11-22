@@ -1,5 +1,6 @@
 This is a port written in python for a web service simulator that was original written in javascript by Aron Racho. This version is a full rewrite with several extra features:
 
+    Supports plain text responses (you can return a web page, or even test invalid JSON objects)
     You can specify the return header to simulate parameters and return codes like 200, 401, 403, etc etc .
     You can specify dynamic replies based on post parameters, random numbers, UUIDs or counters
     You can write your own python code and send it in the registration post to modify the replies dynamically, connect to a database, or whatever you want. There is no limit.
@@ -80,21 +81,29 @@ Gateway timeout:
 				"header":"HTTP/1.1 504 Gateway Timeout\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nConnection:close\\nContent-Type: text/plain\\n\\n"
 			}' http://localhost:2501/register
 Redirect:
+Encode the response (not the header, just the body)
+    python server.py "The URL has moved <a href=\"http://www.example.com\">"
+the command returns the encoded base64 string: VGhlIFVSTCBoYXMgbW92ZWQgPGEgaHJlZj0iaHR0cDovL3d3dy5leGFtcGxlLmNvbSI+
+
 	curl -X POST -H'Content-Type: application/json' -d'{
 				"endpoint": "/example",
 				"method": "get",
 				"header":"HTTP/1.1 302 Found\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nLocation: http://www.example.com\\nConnection:close\\nContent-Type: text/plain\\n\\n",
-				"response":"The URL has moved <a href=\"http://www.example.com\">"
+				"response":"VGhlIFVSTCBoYXMgbW92ZWQgPGEgaHJlZj0iaHR0cDovL3d3dy5leGFtcGxlLmNvbSI+"
 			}' http://localhost:2501/register
  
 
 VERY IMPORTANT:
-
+*Plain text responses MUST be encoded in base64. Read the "Redirect" example to see the fastest way to do it (the script already includes code to encode strings).
 *The return header can be customized and it's actually required (so you know the problem it's not any default value, it's you). New header lines are sent using \\n (check the example).
 *replaceKeys is NOT required. If you don't specify it, the server will always return the static response you sent.
-*response is not required. If you don't specify it the header will be returned.
+*response is NOT required. If you don't specify it the header will be returned.
 *Be careful when you write your own response parser, you may break the reply. Try to double check your python code.
+
+Custom code details:
 *The "custom" code is run after applying all other key replacements to the response.
+*You can get URL params by accessing "request.params" inside your custom code
+*You can share variables between each request, just store them in the dictionary "globalVars"
 
 Copyright 2012 Emilio Moretti <emilio.morettiATgmailDOTcom>
 This program is distributed under the terms of the GNU Lesser General Public License.
