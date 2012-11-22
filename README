@@ -9,7 +9,7 @@ This is a port written in python for a web service simulator that was original w
 The server is attached. Just run python server.py
 
 It runs on port 2501 (you can easily change this).
-It logs requests and responses to /tmp/ws_simulator.log
+It logs requests and responses to ./ws_simulator.log
 
 Basic usage:
 1) post to register a new web service specifying the new endpoint and response
