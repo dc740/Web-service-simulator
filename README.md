@@ -142,8 +142,5 @@ it should return the response with the parameters {x} replaced by the replace ke
 4. Headers are stored in request.headers, and a plain text version is easily accesible with request.header_string
 5. The original contents of the request can be accessed with request.content
 
-## TODO:
-* accept plain responses by default. Do not handle JSON responses differently. This way we wouldn't need to encode base64 strings when we want simple responses.
-
 Copyright 2018 Emilio Moretti <emilio.morettiATgmailDOTcom>
 This program is distributed under the terms of the GNU Lesser General Public License.
