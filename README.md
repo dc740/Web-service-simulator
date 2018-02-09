@@ -128,21 +128,21 @@ it should return the response with the parameters {x} replaced by the replace ke
 
 
 # Final notes
-VERY IMPORTANT:
+## VERY IMPORTANT:
 1. Plain text responses MUST be encoded in base64. Read the "Redirect" example to see the fastest way to do it (the script already includes code to encode strings).
 2. The return header can be customized and it's actually required (so you know the problem it's not any default value, it's you). New header lines are sent using \\n (check the example).
 3. replaceKeys is NOT required. If you don't specify it, the server will always return the static response you sent.
 4. response is NOT required. If you don't specify it the header will be returned.
 5. Be careful when you write your own response parser, you may break the reply. Try to double check your python code.
 
-Custom code details:
+## Custom code details:
 1. The "custom" code is run after applying all other key replacements to the response.
 2. You can get URL params by accessing "request.params" inside your custom code
 3. You can share variables between each request, just store them in the dictionary "globalVars"
 4. Headers are stored in request.headers, and a plain text version is easily accesible with request.header_string
 5. The original contents of the request can be accessed with request.content
 
-TODO:
+## TODO:
 * accept plain responses by default. Do not handle JSON responses differently. This way we wouldn't need to encode base64 strings when we want simple responses.
 
 Copyright 2012 Emilio Moretti <emilio.morettiATgmailDOTcom>
