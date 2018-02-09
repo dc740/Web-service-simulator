@@ -18,24 +18,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
-index = '''
-<html>
-    <head>
-    </head>
-    <body>
-        <form action="/" method="POST">
-            <textarea name="foo"></textarea>
-            <button type="submit">post</button>
-        </form>
-        <h3>data posted</h3>
-        <div>
-            %s
-        </div>
-    </body>
-</html>
-'''
-
 '''
 Custom web server implementation
 '''
@@ -61,7 +43,9 @@ class Headers(object):
 
     def get(self, name, default=None):
         return getattr(self, name, default)
-
+    
+    def items(self):
+        self.__dict__.iter
 class Request(object):
     header_re = re.compile(r'([a-zA-Z-]+):? ([^\r|^\n]+)', re.M)
 
@@ -71,10 +55,10 @@ class Request(object):
         while header_off == -1:
             data += sock.recv(bufsize)
             header_off = data.find('\r\n\r\n')
-        header_string = data[:header_off]
+        self.header_string = data[:header_off]
         self.content = data[header_off+4:]
 
-        lines = self.header_re.findall(header_string)
+        lines = self.header_re.findall(self.header_string)
         self.method, path = lines.pop(0)
         path, protocol = path.split(' ')
         logging.info( "New request\n Path:" + path + " Protocol:" + protocol)
@@ -214,7 +198,6 @@ def registerResponse( response, endpoint, method , replace_keys = None ):
 
 
 def endpoint_register(socket, request):
-    #socket.send('HTTP/1.1 200 OK\n\n' + (index % request.content ) )
     try:
         data = json.loads(request.content)
     except ValueError,e:
@@ -249,12 +232,12 @@ def endpoint_register(socket, request):
     if ( method == 'delete' ):
         delete_endpoints[endpoint] = callback
     if ( response ):
-		if (type(response) is dict):
-			registerResponseResult = registerResponse( str(header).replace("\\n","\n") + json.dumps(response), endpoint, method,replace_keys)
-		else:
-			registerResponseResult = registerResponse( str(header).replace("\\n","\n") + base64.b64decode(response), endpoint, method,replace_keys)
+        if (type(response) is dict):
+            registerResponseResult = registerResponse( str(header).replace("\\n","\n") + json.dumps(response), endpoint, method,replace_keys)
+        else:
+            registerResponseResult = registerResponse( str(header).replace("\\n","\n") + base64.b64decode(response), endpoint, method,replace_keys)
     else:
-		registerResponseResult = registerResponse( str(header).replace("\\n","\n"), endpoint, method,replace_keys)
+        registerResponseResult = registerResponse( str(header).replace("\\n","\n"), endpoint, method,replace_keys)
     
     socket.send('Registered endpoint ' + str(endpoint) + ' \n' + str(registerResponseResult)  )
     
@@ -269,13 +252,13 @@ delete_endpoints = {}
 
 
 if __name__ == '__main__':
-	
-	# we don't handle arguments to avoid having to check if optparse or argparse are available
-	# if there is an argument then we print it encoded in base64
+    
+    # we don't handle arguments to avoid having to check if optparse or argparse are available
+    # if there is an argument then we print it encoded in base64
     if (len(sys.argv) >1):
         print(base64.b64encode(str(sys.argv[1])))
         exit(1)
-    logging.basicConfig(filename='./ws_simulator.log',level=logging.DEBUG)
+    logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s', filename='./ws_simulator.log', level=logging.DEBUG)
     acceptor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     acceptor.setsockopt(
         socket.SOL_SOCKET,
@@ -301,7 +284,7 @@ if __name__ == '__main__':
                 handler = method_handler[request.path]
                 handler(sock,request)
         except Exception,e:
-                logging.error( "%s" % e )
+                logging.exception( "Failed to handle the request." )
 
         sock.close()
 
