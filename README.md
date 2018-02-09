@@ -145,5 +145,5 @@ it should return the response with the parameters {x} replaced by the replace ke
 ## TODO:
 * accept plain responses by default. Do not handle JSON responses differently. This way we wouldn't need to encode base64 strings when we want simple responses.
 
-Copyright 2012 Emilio Moretti <emilio.morettiATgmailDOTcom>
+Copyright 2018 Emilio Moretti <emilio.morettiATgmailDOTcom>
 This program is distributed under the terms of the GNU Lesser General Public License.
