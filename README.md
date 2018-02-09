@@ -39,42 +39,55 @@ the command returns the encoded base64 string: VGhlIFVSTCBoYXMgbW92ZWQgPGEgaHJlZ
 # Advanced usage:
 ## Replace Keys
 Dynamic replies are supported by specifying replaceKeys. Valid replaceKeys:
-#### postParam: replaces the key by the specified post parameter
-#### counter: initializes an internal counter (you can initialize as many as you want), replaces the key by the current value, and increases the internal counter by one
-#### randomInt: replaces the key by a random integer in the "X-Y" range. ie: "4-25" to return a random integer between 4 and 25
-#### randomUUID: replaces the key by a newly generated UUID
-#### custom: executes the python code sent. You can basically do anything you want here. The code MUST be encoded in base64. You can store global variables in the "variables" map. The endpoint response is available in the "response" variable as string. ie:
+#### postParam:
+replaces the key by the specified post parameter
+#### counter:
+initializes an internal counter (you can initialize as many as you want), replaces the key by the current value, and increases the internal counter by one
+#### randomInt:
+replaces the key by a random integer in the "X-Y" range. ie: "4-25" to return a random integer between 4 and 25
+#### randomUUID:
+replaces the key by a newly generated UUID
+#### custom:
+executes the python code sent. You can basically do anything you want here. The code MUST be encoded in base64. You can store global variables in the "variables" map. The endpoint response is available in the "response" variable as string. ie:
 
 ## Examples 
 ## Echo service
 First, let's create a custom code to process a reply that simply returns the request data:
 
+```python
 code="""variables["sample_var1"] = str(request.header_string) + "\\n\\n" + str(request.content) + "\\n\\n\\n"
 response=response.replace("{1}",variables["sample_var1"])"""
 import base64
 b64code = base64.b64encode(code)
 print(b64code)
+```
 
 The base64 code we need is:
-dmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdID0gc3RyKHJlcXVlc3QuaGVhZGVyX3N0cmluZykgKyAiXG5cbiIgKyBzdHIocmVxdWVzdC5jb250ZW50KSArICJcblxuXG4iCnJlc3BvbnNlPXJlc3BvbnNlLnJlcGxhY2UoInsxfSIsdmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdKQ==
+
+        dmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdID0gc3RyKHJlcXVlc3QuaGVhZGVyX3N0cmluZykgKyAiXG5cbiIgKyBzdHIocmVxdWVzdC5jb250ZW50KSArICJcblxuXG4iCnJlc3BvbnNlPXJlc3BvbnNlLnJlcGxhY2UoInsxfSIsdmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdKQ==
 
 Since this is a plain response, and not a json response, we need to encode it in base64 too. 
+```python
 b64code = base64.b64encode("{1}")
 print(b64code)
-ezF9
+```
+
+    ezF9
 
 Now lets register an echo endpoint with our code
-curl -X POST -H'Content-Type: application/json' -d'
-{
-"endpoint": "/echo",
-"method": "post",
-"header":"HTTP/1.1 200 OK\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nConnection:close\\n\\n",
-"replaceKeys":[{"key":"1","type":"custom","value":"dmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdID0gc3RyKHJlcXVlc3QuaGVhZGVyX3N0cmluZykgKyAiXG5cbiIgKyBzdHIocmVxdWVzdC5jb250ZW50KSArICJcblxuXG4iCnJlc3BvbnNlPXJlc3BvbnNlLnJlcGxhY2UoInsxfSIsdmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdKQ=="}],
-"response": "ezF9"
-}' http://localhost:2501/register
+
+    curl -X POST -H'Content-Type: application/json' -d'
+    {
+    "endpoint": "/echo",
+    "method": "post",
+    "header":"HTTP/1.1 200 OK\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nConnection:close\\n\\n",
+    "replaceKeys":[{"key":"1","type":"custom","value":"dmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdID0gc3RyKHJlcXVlc3QuaGVhZGVyX3N0cmluZykgKyAiXG5cbiIgKyBzdHIocmVxdWVzdC5jb250ZW50KSArICJcblxuXG4iCnJlc3BvbnNlPXJlc3BvbnNlLnJlcGxhY2UoInsxfSIsdmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdKQ=="}],
+    "response": "ezF9"
+    }' http://localhost:2501/register
 
 Lets test it:
-curl -X POST -H'Content-Type: application/json' -d'Hola mundo' http://localhost:2501/echo
+
+    curl -X POST -H'Content-Type: application/json' -d'Hola mundo' http://localhost:2501/echo
 
 ## JSON keys replacement
 In this example we will use all possible key replacements:
