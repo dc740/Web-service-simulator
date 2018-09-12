@@ -16,22 +16,22 @@ It logs requests and responses to ./ws_simulator.log
 ## Simulating HTTP errors:
 
 ### Gateway timeout:
-	 curl -X POST -H'Content-Type: application/json' -d'{
-				"endpoint": "/timeout",
-				"method": "get",
-				"header":"HTTP/1.1 504 Gateway Timeout\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nConnection:close\\nContent-Type: text/plain\\n\\n"
-			}' http://localhost:2501/register
+     curl -X POST -H'Content-Type: application/json' -d'{
+                "endpoint": "/timeout",
+                "method": "get",
+                "header":"HTTP/1.1 504 Gateway Timeout\nDate: Fri, 20 June 2008 20:40:34 GMT\nServer:SING\nX-Powered-By: emilio\nConnection:close\nContent-Type: text/plain\n"
+            }' http://localhost:2501/register
 ### Redirect:
 Encode the response (not the header, just the body)
     python server.py "The URL has moved <a href=\"http://www.example.com\">"
 the command returns the encoded base64 string: VGhlIFVSTCBoYXMgbW92ZWQgPGEgaHJlZj0iaHR0cDovL3d3dy5leGFtcGxlLmNvbSI+
 
-	curl -X POST -H'Content-Type: application/json' -d'{
-				"endpoint": "/example",
-				"method": "get",
-				"header":"HTTP/1.1 302 Found\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nLocation: http://www.example.com\\nConnection:close\\nContent-Type: text/plain\\n\\n",
-				"response":"VGhlIFVSTCBoYXMgbW92ZWQgPGEgaHJlZj0iaHR0cDovL3d3dy5leGFtcGxlLmNvbSI+"
-			}' http://localhost:2501/register
+    curl -X POST -H'Content-Type: application/json' -d'{
+                "endpoint": "/example",
+                "method": "get",
+                "header":"HTTP/1.1 302 Found\nDate: Fri, 20 June 2008 20:40:34 GMT\nServer:SING\nX-Powered-By: emilio\nLocation: http://www.example.com\nConnection:close\nContent-Type: text/plain\n",
+                "response":"VGhlIFVSTCBoYXMgbW92ZWQgPGEgaHJlZj0iaHR0cDovL3d3dy5leGFtcGxlLmNvbSI+"
+            }' http://localhost:2501/register
  
 1) post to register a new web service specifying the new endpoint and response
 2) use the new endpoint as a real web service
@@ -50,39 +50,39 @@ replaces the key by a newly generated UUID
 #### custom:
 executes the python code sent. You can basically do anything you want here. The code MUST be encoded in base64. You can store global variables in the "variables" map. The endpoint response is available in the "response" variable as string. ie:
 
-## Examples 
+## Examples
+
+The script supports two modes:
+#### Plain text: We send the response as a base64 encoded string.
+#### JSON: We send the response directly as a JSON object
+
 ## Echo service
-First, let's create a custom code to process a reply that simply returns the request data:
+The first example is in Plain Text mode, let's create a custom code to process a reply that simply returns the request data:
 
-```python
-code="""variables["sample_var1"] = str(request.header_string) + "\\n\\n" + str(request.content) + "\\n\\n\\n"
-response=response.replace("{1}",variables["sample_var1"])"""
-import base64
-b64code = base64.b64encode(code)
-print(b64code)
-```
+    echo 'variables["sample_var1"] = str(request.header_string) + "\n\n" + str(request.content)
+    data=data.replace("{1}",variables["sample_var1"])' | base64 -w0
 
-The base64 code we need is:
+The output is:
 
-        dmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdID0gc3RyKHJlcXVlc3QuaGVhZGVyX3N0cmluZykgKyAiXG5cbiIgKyBzdHIocmVxdWVzdC5jb250ZW50KSArICJcblxuXG4iCnJlc3BvbnNlPXJlc3BvbnNlLnJlcGxhY2UoInsxfSIsdmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdKQ==
+    dmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdID0gc3RyKHJlcXVlc3QuaGVhZGVyX3N0cmluZykgKyAiXG5cbiIgKyBzdHIocmVxdWVzdC5jb250ZW50KQpkYXRhPWRhdGEucmVwbGFjZSgiezF9Iix2YXJpYWJsZXNbInNhbXBsZV92YXIxIl0pCg==
 
-Since this is a plain response, and not a json response, we need to encode it in base64 too. 
-```python
-b64code = base64.b64encode("{1}")
-print(b64code)
-```
+Since this is a plain response, and not a json response, we need the output from the base64 command for the response. In this example our response is all that the custom code generates for the key {1}. Which means our entire response is actually {1}.
+Lets encode it:
 
-    ezF9
+    echo '{1}' | base64 -w0
+    ezF9Cg==
 
-Now lets register an echo endpoint with our code
+
+
+The final step is to register an endpoint with our code that uses custom code to replace '{1}' from our plain text response:
 
     curl -X POST -H'Content-Type: application/json' -d'
     {
     "endpoint": "/echo",
     "method": "post",
-    "header":"HTTP/1.1 200 OK\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nConnection:close\\n\\n",
-    "replaceKeys":[{"key":"1","type":"custom","value":"dmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdID0gc3RyKHJlcXVlc3QuaGVhZGVyX3N0cmluZykgKyAiXG5cbiIgKyBzdHIocmVxdWVzdC5jb250ZW50KSArICJcblxuXG4iCnJlc3BvbnNlPXJlc3BvbnNlLnJlcGxhY2UoInsxfSIsdmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdKQ=="}],
-    "response": "ezF9"
+    "header":"HTTP/1.1 200 OK\nDate: Fri, 20 June 2008 20:40:34 GMT\nServer:SING\nX-Powered-By: emilio\nConnection:close\n",
+    "replaceKeys":[{"key":"1","type":"custom","value":"dmFyaWFibGVzWyJzYW1wbGVfdmFyMSJdID0gc3RyKHJlcXVlc3QuaGVhZGVyX3N0cmluZykgKyAiXG5cbiIgKyBzdHIocmVxdWVzdC5jb250ZW50KQpkYXRhPWRhdGEucmVwbGFjZSgiezF9Iix2YXJpYWJsZXNbInNhbXBsZV92YXIxIl0pCg=="}],
+    "response": "ezF9Cg=="
     }' http://localhost:2501/register
 
 Lets test it:
@@ -92,31 +92,28 @@ Lets test it:
 ## JSON keys replacement
 In this example we will use all possible key replacements:
 
-	curl -X POST -H'Content-Type: application/json' -d'
+    curl -X POST -H'Content-Type: application/json' -d'
+            {
+                "endpoint": "/test",
+                "method": "post",
+                "header":"HTTP/1.1 200 OK\nDate: Fri, 20 June 2008 20:40:34 GMT\nServer:SING\nX-Powered-By: emilio\nConnection:close\nContent-Type: application/json\n",
+                "replaceKeys":[{"key":"1","type":"postParam","value":"firstpostparam"},
+                               {"key":"2","type":"postParam","value":"secondpostparam"},
+                               {"key":"3","type":"counter","value":"internalCounter1"},
+                               {"key":"4","type":"randomInt","value":"0-65535"},
+                               {"key":"5","type":"randomUUID","value":""},
+                               {"key":"6","type":"custom","value":"dmFyaWFibGVzWyJoZWxsbyJdPSJIZWxsbyBXb3JsZCIKZGF0YT1kYXRhLnJlcGxhY2UoIns2fSIsdmFyaWFibGVzWyJoZWxsbyJdKQo="}],
+                "response": {
+                    "firstPostParam": "{1}",
+                    "secondPostParam": "{2}",
+                    "myCounter": "{3}",
+                    "firstPostAgain": "{1}",
+                    "randomInteger":"{4}",
+                    "randomUUID":"{5}",
+                    "customCode":"{6}"
+                }
+            }' http://localhost:2501/register
 
-			{
-				"endpoint": "/test",
-				"method": "post",
-				"header":"HTTP/1.1 200 OK\\nDate: Fri, 20 June 2008 20:40:34 GMT\\nServer:SING\\nX-Powered-By: emilio\\nConnection:close\\nContent-Type: application/json\\n\\n",
-				"replaceKeys":[{"key":"1","type":"postParam","value":"firstpostparam"},
-							   {"key":"2","type":"postParam","value":"secondpostparam"},
-							   {"key":"3","type":"counter","value":"internalCounter1"},
-							   {"key":"4","type":"randomInt","value":"0-65535"},
-							   {"key":"5","type":"randomUUID","value":""},
-							   {"key":"6","type":"custom","value":"dmFyaWFibGVzWyJoZWxsbyJdPSJIZWxsbyBXb3JsZCIKcmVzcG9uc2U9cmVzcG9uc2UucmVwbGFjZSgiezZ9Iix2YXJpYWJsZXNbImhlbGxvIl0p"}],
-				"response": {
-					"firstPostParam": "{1}",
-					"secondPostParam": "{2}",
-					"myCounter": "{3}",
-					"firstPostAgain": "{1}",
-					"randomInteger":"{4}",
-					"randomUUID":"{5}",
-					"customCode":"{6}"
-				}
-			}' http://localhost:2501/register
-
-
- 
 
 Now that you have configured an endpoint, test if it works:
 
@@ -130,10 +127,9 @@ it should return the response with the parameters {x} replaced by the replace ke
 # Final notes
 ## VERY IMPORTANT:
 1. Plain text responses MUST be encoded in base64. Read the "Redirect" example to see the fastest way to do it (the script already includes code to encode strings).
-2. The return header can be customized and it's actually required (so you know the problem it's not any default value, it's you). New header lines are sent using \\n (check the example).
-3. replaceKeys is NOT required. If you don't specify it, the server will always return the static response you sent.
-4. response is NOT required. If you don't specify it the header will be returned.
-5. Be careful when you write your own response parser, you may break the reply. Try to double check your python code.
+2. replaceKeys is NOT required. If you don't specify it, the server will always return the static response you sent.
+3. response is NOT required. If you don't specify it the header will be returned.
+4. Be careful when you write your own response parser, you may break the reply. Try to double check your python code.
 
 ## Custom code details:
 1. The "custom" code is run after applying all other key replacements to the response.

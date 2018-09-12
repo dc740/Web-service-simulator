@@ -18,12 +18,17 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-'''
-Custom web server implementation
-'''
-bufsize = 4048
-import sys,socket,re,logging,uuid,random,base64
+
+import sys
+import socket
+import re
+import logging
+import uuid
+import random
+import base64
 from urlparse import urlparse
+
+
 try:
     from urlparse import parse_qs
 except:
@@ -32,6 +37,11 @@ try:
     import json
 except ImportError:
     import simplejson as json
+    
+'''
+Custom web server implementation
+'''
+bufsize = 4048
 
 
 class Headers(object):
@@ -43,9 +53,11 @@ class Headers(object):
 
     def get(self, name, default=None):
         return getattr(self, name, default)
-    
+
     def items(self):
         self.__dict__.iter
+
+
 class Request(object):
     header_re = re.compile(r'([a-zA-Z-]+):? ([^\r|^\n]+)', re.M)
 
@@ -56,12 +68,12 @@ class Request(object):
             data += sock.recv(bufsize)
             header_off = data.find('\r\n\r\n')
         self.header_string = data[:header_off]
-        self.content = data[header_off+4:]
+        self.content = data[header_off + 4:]
 
         lines = self.header_re.findall(self.header_string)
         self.method, path = lines.pop(0)
         path, protocol = path.split(' ')
-        logging.info( "New request\n Path:" + path + " Protocol:" + protocol)
+        logging.info("New request\n Path:" + path + " Protocol:" + protocol)
         self.headers = Headers(
             (name.lower().replace('-', '_'), value)
             for name, value in lines
@@ -69,7 +81,7 @@ class Request(object):
 
         if self.method in ['POST', 'PUT']:
             content_length = int(self.headers.get('content_length', 0))
-            while len(self.content) <  content_length:
+            while len(self.content) < content_length:
                 self.content += sock.recv(bufsize)
 
         parsed_path = urlparse(path)
@@ -83,23 +95,27 @@ Web service simulator logic
 '''
 responseMap = {}
 replaceMap = {}
-counters={}
-globalVars={}
+counters = {}
+globalVars = {}
 random.seed()
 
 
-def processPostParam(request,responseKey,response,replace_key,value):
-    #let's get the value of the post param from the data
+def processPostParam(request, dataKey, data, replace_key, value):
+    # let's get the value of the post param from the data
     params = parse_qs(request.content)
     try:
-        replace_value = params[value][0] # WARNING! get the first value. the post params should not send several values!
-        return str(response).replace("{" + replace_key + "}",replace_value)
+        # WARNING! get the first value. the post params should not send several
+        # values!
+        replace_value = params[value][0]
+        return str(data).replace("{" + replace_key + "}", replace_value)
     except KeyError:
-        logging.error('Post param not sent to replace ' + replace_key + '. Returning response without modification.')
-        return str(response)
+        logging.error('Post param not sent to replace ' +
+                      replace_key +
+                      '. Returning data without modification.')
+        return str(data)
 
 
-def processCounter(request,responseKey,response,replace_key,value):
+def processCounter(request, dataKey, data, replace_key, value):
     '''
     Replace the key by an internal counter incremented by one on each call
     '''
@@ -110,15 +126,17 @@ def processCounter(request,responseKey,response,replace_key,value):
         counter_value = 0
 
     counters[value] = counter_value
-    return str(response).replace("{" + replace_key + "}",str(counter_value))
-    
-def processRandomUUID(request,responseKey,response,replace_key,value):
+    return str(data).replace("{" + replace_key + "}", str(counter_value))
+
+
+def processRandomUUID(request, dataKey, data, replace_key, value):
     '''
     Replace key with a random UUID
     '''
-    return str(response).replace("{" + replace_key + "}",str(uuid.uuid4()))
+    return str(data).replace("{" + replace_key + "}", str(uuid.uuid4()))
 
-def processRandomInteger(request,responseKey,response,replace_key,value):
+
+def processRandomInteger(request, dataKey, data, replace_key, value):
     '''
     Replace key witha  random integer between A and B.
     value must have the following format: a-b
@@ -128,88 +146,112 @@ def processRandomInteger(request,responseKey,response,replace_key,value):
     try:
         a = int(values[0])
         b = int(values[1])
-        return str(response).replace("{" + replace_key + "}",str(random.randint(a,b)))
+        return str(data).replace("{" + replace_key + "}",
+                                     str(random.randint(a, b)))
     except ValueError:
-        logging.error('Invalid random int range. Returning response without modification.')
-        return str(response)
+        logging.error(
+            'Invalid random int range. '
+            'Returning data without modification.')
+        return str(data)
 
-def processCustomParser(request,responseKey,response,replace_key,value):
+
+def processCustomParser(request, dataKey, data, replace_key, value):
     variables = globalVars
     try:
         code = base64.b64decode(str(value))
         exec code
-        return response
-    except Exception,e:
-        logging.error( 'Error running custom code: %s\nCustom code:\n%sResponse:%s' % (e,code,response))
-    
+        return data
+    except Exception, e:
+        logging.error('Error running custom code: %s\n'
+                      'Custom code:\n%sdata:%s' % (
+                          e, code, data))
+
+
 # Oks, I have to admint that this is a little cryptic for those not used to python
 # we basically use a dictionary as a replacement for a switch statement :)
-def preProcessResponse(request,responseKey,response,replace_key,value,key_type):
+def preProcessData(request, responseKey, data, replace_key, value,
+                       key_type):
     try:
-        return {'postParam':processPostParam,
-         'counter':processCounter,
-         'randomUUID':processRandomUUID,
-         'randomInt':processRandomInteger,
-         'custom': processCustomParser}[key_type](request,responseKey,response,replace_key,value)
-    except KeyError,e:
-        logging.error( str(key_type) + ' is not a valid key. Try post_params|counter|custom|randomUUID|randomInt|custom. Error: %s' % e)
-    
-    
+        return {'postParam': processPostParam,
+                'counter': processCounter,
+                'randomUUID': processRandomUUID,
+                'randomInt': processRandomInteger,
+                'custom': processCustomParser}[key_type](request, responseKey,
+                                                         data, replace_key,
+                                                         value)
+    except KeyError, e:
+        logging.error(str(
+            key_type) + ' is not a valid key. Try '
+            'post_params|counter|custom|randomUUID|randomInt|custom. '
+            'Error: %s' % e)
 
-def requestProcessor( request, responseKey ):
+
+def requestProcessor(request, responseKey):
     data = request.content
     logging.info('---------------------------------')
-    logging.info( str(responseKey) )
+    logging.info(str(responseKey))
     logging.info('---------------------------------')
     logging.info('Received: ' + str(data))
-    response = responseMap[responseKey]
+    header, response = responseMap[responseKey]
     try:
         replace_keys = replaceMap[responseKey]
         for key in replace_keys:
-            response = preProcessResponse(request,responseKey,response,key['key'],key['value'],key['type'])
+            header = preProcessData(
+                request, responseKey, header, key['key'], key['value'],
+                key['type'])
+            response = preProcessData(
+                request, responseKey, response, key['key'], key['value'],
+                key['type'])
     except KeyError:
         pass
-    logging.info('Response: ' + str(response) )
+    final_response = str(header) + '\n' + str(response)
+    logging.info('Response: ' + final_response)
+    return final_response
+
+
+def requestSetter(header, data, responseKey, replace_keys=None):
+    responseMap[responseKey] = (str(header), str(data))
+    if (replace_keys):
+        replaceMap[responseKey] = replace_keys
+    response = 'Updated response for ' + \
+        str(responseKey) + ' to:\n' + str(data)
+    logging.info(str(response))
     return response
 
-def requestSetter( data, responseKey , replace_keys = None ):
-    responseMap[responseKey] = str(data)
-    if (replace_keys): replaceMap[responseKey] = replace_keys
-    response = 'Updated response for ' + str(responseKey) + ' to:\n' + str(data)
-    logging.info( str(response ) )
-    return response
 
-def buildKey( method, endpoint):
+def buildKey(method, endpoint):
     key = method
-    if ( method == 'post' ):
+    if (method.lower() == 'post'):
         key = 'POST:'
-    elif ( method == 'get' ):
+    elif (method.lower() == 'get'):
         key = 'GET:'
-    elif ( method == 'put' ):
+    elif (method.lower() == 'put'):
         key = 'PUT:'
-    elif ( method == 'delete' ):
+    elif (method.lower() == 'delete'):
         key = 'DELETE:'
     key = key + endpoint
     return key
-    
-def registerResponse( response, endpoint, method , replace_keys = None ):
-    key = buildKey( method, endpoint )
-    return requestSetter( response, key , replace_keys )
+
+
+def registerResponse(header, response, endpoint, method, replace_keys=None):
+    key = buildKey(method, endpoint)
+    return requestSetter(header, response, key, replace_keys)
 
 
 def endpoint_register(socket, request):
     try:
         data = json.loads(request.content)
-    except ValueError,e:
-        logging.error('Fatal error, invalid json sent to the register endpoint: %s' % e)
+    except ValueError, e:
+        logging.error(
+            'Fatal error, invalid json sent to the register endpoint: %s' % e)
         return
-    
+
     header = data['header']
     endpoint = data['endpoint']
     method = data['method']
-    
-    key = buildKey( method, endpoint )
-    
+
+    key = buildKey(method, endpoint)
+
     try:
         response = data['response']
     except KeyError:
@@ -219,72 +261,77 @@ def endpoint_register(socket, request):
     except KeyError:
         replace_keys = None
 
+    def callback(sock, req):
+        sock.send(str(requestProcessor(req, key)))
 
-    def callback(sock,req):
-        sock.send( str(requestProcessor( req, key )) )
-        
-    if ( method == 'post' ):
+    if (method == 'post'):
         post_endpoints[endpoint] = callback
-    if ( method == 'get' ):
+    if (method == 'get'):
         get_endpoints[endpoint] = callback
-    if ( method == 'put' ):
+    if (method == 'put'):
         put_endpoints[endpoint] = callback
-    if ( method == 'delete' ):
+    if (method == 'delete'):
         delete_endpoints[endpoint] = callback
-    if ( response ):
+    if (response):
         if (type(response) is dict):
-            registerResponseResult = registerResponse( str(header).replace("\\n","\n") + json.dumps(response), endpoint, method,replace_keys)
+            registerResponseResult = registerResponse(str(header),
+                                                      json.dumps(response),
+                                                      endpoint, method,
+                                                      replace_keys)
         else:
-            registerResponseResult = registerResponse( str(header).replace("\\n","\n") + base64.b64decode(response), endpoint, method,replace_keys)
+            registerResponseResult = registerResponse(str(header),
+                                                      base64.b64decode(response),
+                                                      endpoint, method,
+                                                      replace_keys)
     else:
-        registerResponseResult = registerResponse( str(header).replace("\\n","\n"), endpoint, method,replace_keys)
-    
-    socket.send('Registered endpoint ' + str(endpoint) + ' \n' + str(registerResponseResult)  )
-    
-   
-    
+        registerResponseResult = registerResponse(str(header), '', endpoint, method, replace_keys)
+
+    socket.send('Registered endpoint ' + str(endpoint) +
+                ' \n' + str(registerResponseResult))
 
 
-post_endpoints = {'/register':endpoint_register}
+post_endpoints = {'/register': endpoint_register}
 put_endpoints = {}
 get_endpoints = {}
 delete_endpoints = {}
 
 
 if __name__ == '__main__':
-    
+
     # we don't handle arguments to avoid having to check if optparse or argparse are available
     # if there is an argument then we print it encoded in base64
-    if (len(sys.argv) >1):
+    if (len(sys.argv) > 1):
         print(base64.b64encode(str(sys.argv[1])))
         exit(1)
-    logging.basicConfig(format='%(asctime)s,%(msecs)d %(levelname)-8s [%(filename)s:%(lineno)d] %(message)s', filename='./ws_simulator.log', level=logging.DEBUG)
+    logging.basicConfig(
+        format='%(asctime)s,%(msecs)d %(levelname)-8s '
+        '[%(filename)s:%(lineno)d] %(message)s',
+        filename='./ws_simulator.log', level=logging.DEBUG)
     acceptor = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     acceptor.setsockopt(
         socket.SOL_SOCKET,
         socket.SO_REUSEADDR,
         1,
-        )
-    acceptor.bind(('', 2501 ))
+    )
+    acceptor.bind(('', 2501))
     acceptor.listen(10)
-    
+
     while True:
         sock, info = acceptor.accept()
         request = Request(sock)
-        if ( request.method == 'POST' ):
+        if (request.method == 'POST'):
             method_handler = post_endpoints
-        elif (request.method == 'GET' ):
+        elif (request.method == 'GET'):
             method_handler = get_endpoints
-        elif (request.method == 'PUT' ):
+        elif (request.method == 'PUT'):
             method_handler = put_endpoints
-        elif ( request.method == 'DELETE' ):
-            method_handler = delete_endpoints        
-        
+        elif (request.method == 'DELETE'):
+            method_handler = delete_endpoints
+
         try:
                 handler = method_handler[request.path]
-                handler(sock,request)
-        except Exception,e:
-                logging.exception( "Failed to handle the request." )
+                handler(sock, request)
+        except Exception, e:
+                logging.exception("Failed to handle the request.")
 
         sock.close()
-
