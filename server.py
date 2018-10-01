@@ -273,7 +273,7 @@ def endpoint_register(socket, request):
     if (method == 'delete'):
         delete_endpoints[endpoint] = callback
     if (response):
-        if (type(response) is dict):
+        if (type(response) is dict or type(response) is list):
             registerResponseResult = registerResponse(str(header),
                                                       json.dumps(response),
                                                       endpoint, method,
