@@ -18,7 +18,6 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-
 import sys
 import socket
 import re
@@ -26,17 +25,8 @@ import logging
 import uuid
 import random
 import base64
-from urlparse import urlparse
-
-
-try:
-    from urlparse import parse_qs
-except:
-    from cgi import parse_qs
-try:
-    import json
-except ImportError:
-    import simplejson as json
+from urllib.parse import parse_qs, urlparse
+import json
     
 '''
 Custom web server implementation
@@ -45,6 +35,7 @@ bufsize = 4048
 
 
 class Headers(object):
+
     def __init__(self, headers):
         self.__dict__.update(headers)
 
@@ -65,7 +56,7 @@ class Request(object):
         header_off = -1
         data = ''
         while header_off == -1:
-            data += sock.recv(bufsize)
+            data += sock.recv(bufsize).decode('utf-8')
             header_off = data.find('\r\n\r\n')
         self.header_string = data[:header_off]
         self.content = data[header_off + 4:]
@@ -82,13 +73,12 @@ class Request(object):
         if self.method in ['POST', 'PUT']:
             content_length = int(self.headers.get('content_length', 0))
             while len(self.content) < content_length:
-                self.content += sock.recv(bufsize)
+                self.content += sock.recv(bufsize).decode('utf-8')
 
         parsed_path = urlparse(path)
         self.query = parsed_path[4]
         self.params = parsed_path[3]
         self.path = parsed_path[2]
-
 
 '''
 Web service simulator logic
@@ -109,8 +99,8 @@ def processPostParam(request, dataKey, data, replace_key, value):
         replace_value = params[value][0]
         return str(data).replace("{" + replace_key + "}", replace_value)
     except KeyError:
-        logging.error('Post param not sent to replace ' +
-                      replace_key +
+        logging.error('Post param not sent to replace ' + 
+                      replace_key + 
                       '. Returning data without modification.')
         return str(data)
 
@@ -156,15 +146,17 @@ def processRandomInteger(request, dataKey, data, replace_key, value):
 
 
 def processCustomParser(request, dataKey, data, replace_key, value):
-    variables = globalVars
     try:
-        code = base64.b64decode(str(value))
-        exec code
-        return data
-    except Exception, e:
-        logging.error('Error running custom code: %s\n'
-                      'Custom code:\n%sdata:%s' % (
-                          e, code, data))
+        global globalVars
+        code = base64.b64decode(str(value)).decode('utf-8')
+        local_vars = {'data':data, 'variables':globalVars}
+        exec(code, globals(), local_vars)
+        globalVars = local_vars['variables']
+        return local_vars['data']
+    except Exception as e:
+        logging.exception('Error running custom code: %s\n'
+                      'Custom code:\n%sdata:%s',
+                          e, code, data)
 
 
 # Oks, I have to admint that this is a little cryptic for those not used to python
@@ -179,8 +171,8 @@ def preProcessData(request, responseKey, data, replace_key, value,
                 'custom': processCustomParser}[key_type](request, responseKey,
                                                          data, replace_key,
                                                          value)
-    except KeyError, e:
-        logging.error(str(
+    except KeyError as e:
+        logging.exception(str(
             key_type) + ' is not a valid key. Try '
             'post_params|counter|custom|randomUUID|randomInt|custom. '
             'Error: %s' % e)
@@ -241,9 +233,10 @@ def registerResponse(header, response, endpoint, method, replace_keys=None):
 def endpoint_register(socket, request):
     try:
         data = json.loads(request.content)
-    except ValueError, e:
-        logging.error(
-            'Fatal error, invalid json sent to the register endpoint: %s' % e)
+    except ValueError as e:
+        logging.exception(
+            'Fatal error, invalid json sent to the register endpoint: %s', e)
+        socket.send(f'Fatal error, invalid json sent to the register endpoint: {e}'.encode())
         return
 
     header = data['header']
@@ -262,7 +255,7 @@ def endpoint_register(socket, request):
         replace_keys = None
 
     def callback(sock, req):
-        sock.send(str(requestProcessor(req, key)))
+        sock.send(requestProcessor(req, key).encode())
 
     if (method == 'post'):
         post_endpoints[endpoint] = callback
@@ -286,15 +279,13 @@ def endpoint_register(socket, request):
     else:
         registerResponseResult = registerResponse(str(header), '', endpoint, method, replace_keys)
 
-    socket.send('Registered endpoint ' + str(endpoint) +
-                ' \n' + str(registerResponseResult))
+    socket.send(f'Registered endpoint {endpoint}\n{registerResponseResult}'.encode())
 
 
 post_endpoints = {'/register': endpoint_register}
 put_endpoints = {}
 get_endpoints = {}
 delete_endpoints = {}
-
 
 if __name__ == '__main__':
 
@@ -331,7 +322,7 @@ if __name__ == '__main__':
         try:
                 handler = method_handler[request.path]
                 handler(sock, request)
-        except Exception, e:
+        except Exception as e:
                 logging.exception("Failed to handle the request.")
 
         sock.close()
